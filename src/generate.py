@@ -68,7 +68,7 @@ def chat(model_dir="outputs/checkpoints", max_new_tokens=100):
                 return_tensors="pt",
                 padding=True,
                 truncation=True,
-                max_length=max_seq_length // 2  # 为生成留出空间
+                max_length=256 // 2  # 为生成留出空间
             )
 
             if torch.cuda.is_available():

@@ -1,12 +1,15 @@
 import json
+import torch
 from torch.utils.data import Dataset
 
+
 class AlpacaDataset(Dataset):
-    def __init__(self, path, tokenizer, max_length=256):
+    def __init__(self, file_path, tokenizer, max_length=512):
         self.data = []
-        with open(path, "r", encoding="utf-8") as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             for line in f:
-                self.data.append(json.loads(line))
+                self.data.append(json.loads(line.strip()))
+
         self.tokenizer = tokenizer
         self.max_length = max_length
 
@@ -15,26 +18,18 @@ class AlpacaDataset(Dataset):
 
     def __getitem__(self, idx):
         item = self.data[idx]
-        instruction = item["instruction"]
-        input_text = item.get("input", "")
-        output = item["output"]
+        prompt = f"用户：{item['instruction']}\n助手：{item['output']}"
 
-        if input_text:
-            prompt = f"用户: {instruction}\n{input_text}\n助手:"
-        else:
-            prompt = f"用户: {instruction}\n助手:"
-
-        source = self.tokenizer(prompt, truncation=True, padding="max_length", max_length=self.max_length, return_tensors="pt")
-        target = self.tokenizer(output, truncation=True, padding="max_length", max_length=self.max_length, return_tensors="pt")
-
-        source_ids = source["input_ids"].squeeze()
-        target_ids = target["input_ids"].squeeze()
-
-        labels = target_ids.clone()
-        labels[target["attention_mask"].squeeze() == 0] = -100
+        encoding = self.tokenizer(
+            prompt,
+            truncation=True,
+            max_length=self.max_length,
+            padding='max_length',
+            return_tensors='pt'
+        )
 
         return {
-            "input_ids": source_ids,
-            "attention_mask": source["attention_mask"].squeeze(),
-            "labels": labels,
+            'input_ids': encoding['input_ids'].flatten(),
+            'attention_mask': encoding['attention_mask'].flatten(),
+            'labels': encoding['input_ids'].flatten()
         }
